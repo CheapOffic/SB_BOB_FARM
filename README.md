@@ -1,7 +1,8 @@
 # BOB Glove Portal Farmer V1 #vibecode
 
 Languages: [English](#english) | [Русский](#русский) | [Українська](#українська)
-tutorial: https://www.youtube.com/watch?v=NB7P3Ffu-2E
+
+Tutorial: https://www.youtube.com/watch?v=NB7P3Ffu-2E
 
 ---
 
