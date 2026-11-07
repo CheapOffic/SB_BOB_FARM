@@ -1,4 +1,4 @@
-# BOB Glove Portal Farmer V1 #vibecode
+# BOB Glove Portal Farmer V1.2 #vibecode
 
 Languages: [English](#english) | [Русский](#русский) | [Українська](#українська)
 
