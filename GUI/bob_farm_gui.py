@@ -18,7 +18,7 @@ Stop: the Stop button or F8 (works while Roblox is focused).
 Install:  pip install mss opencv-python numpy pydirectinput
 Run:      python bob_farm_gui.py
 """
-import os, sys, json, time, ctypes, threading, base64, queue, platform
+import os, sys, json, time, ctypes, threading, base64, queue, platform, urllib.request, urllib.error, hashlib, re, tempfile
 from ctypes import wintypes
 
 try:
@@ -40,6 +40,11 @@ pdi.FAILSAFE = False
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bob_farm_config.json")
 CONFIG_VERSION = 2
+APP_VERSION = "V1.1"
+GITHUB_API_CONFIGS = "https://api.github.com/repos/CheapOffic/SB_BOB_FARM/contents/CONFIGS?ref=main"
+GITHUB_GUI_RAW = "https://raw.githubusercontent.com/CheapOffic/SB_BOB_FARM/main/GUI/bob_farm_gui.py"
+GIT_CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GIT_CONFIGS")
+GIT_CONFIG_STATE = os.path.join(GIT_CONFIG_DIR, ".download_state.json")
 MIGRATE_RESET = ("search_spin", "search_speed", "jump_while_walking")   # reset to the new defaults when an older file is loaded
 STOP_KEY_VK = 0x77            # F8
 WINDOW_TITLE = "Roblox"
@@ -221,6 +226,7 @@ TEXT = {
         "tab.settings": "Settings", "tab.requirements": "Requirements",
         "btn.start": "Start", "btn.stop": "Stop", "btn.save": "Save settings", "btn.reset": "Reset to defaults",
         "btn.choose_config": "Choose config", "btn.export_config": "Export config",
+        "btn.git_config": "SET CONFIG FROM GIT", "btn.check_updates": "CHECK FOR UPDATES",
         "status.idle": "Idle", "status.starting": "Starting - click into Roblox", "status.running": "Running",
         "status.stopping": "Stopping...",
         "preview.title": "Live preview", "preview.off": "Preview is off", "preview.wait": "Waiting for the first frame...",
@@ -314,6 +320,7 @@ TEXT = {
         "tab.settings": "Настройки", "tab.requirements": "Требования",
         "btn.start": "Старт", "btn.stop": "Стоп", "btn.save": "Сохранить настройки", "btn.reset": "Сбросить по умолчанию",
         "btn.choose_config": "Выбрать конфиг", "btn.export_config": "Экспорт конфига",
+        "btn.git_config": "SET CONFIG FROM GIT", "btn.check_updates": "CHECK FOR UPDATES",
         "status.idle": "Ожидание", "status.starting": "Запуск - кликни в окно Roblox", "status.running": "Работает",
         "status.stopping": "Останавливаю...",
         "preview.title": "Превью", "preview.off": "Превью выключено", "preview.wait": "Жду первый кадр...",
@@ -1042,6 +1049,10 @@ class App:
         self.button(bar, "btn.reset", self.on_reset).pack(side="left", padx=(10, 0))
         self.button(bar, "btn.choose_config", self.on_choose_config).pack(side="left", padx=(10, 0))
         self.button(bar, "btn.export_config", self.on_export_config).pack(side="left", padx=(10, 0))
+        cloud_bar = tk.Frame(tab_settings, bg=BG)
+        cloud_bar.pack(side="bottom", fill="x", pady=(8, 0))
+        self.button(cloud_bar, "btn.git_config", self.on_git_configs, accent=True).pack(side="left")
+        self.button(cloud_bar, "btn.check_updates", self.on_check_updates).pack(side="left", padx=(10, 0))
         wrap, inner = self.make_scrollable(tab_settings)
         wrap.pack(fill="both", expand=True, pady=(12, 0))
         self.build_settings(inner)
@@ -1278,6 +1289,300 @@ class App:
                  "Не удалось экспортировать конфигурацию:\n") + str(e)
             )
 
+    def _github_request(self, url, timeout=25):
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "BOB-Farm-GUI",
+            "Accept": "application/vnd.github+json"
+        })
+        with urllib.request.urlopen(req, timeout=timeout) as response:
+            return response.read()
+
+    def _read_git_state(self):
+        try:
+            with open(GIT_CONFIG_STATE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    def _write_git_state(self, data):
+        os.makedirs(GIT_CONFIG_DIR, exist_ok=True)
+        tmp = GIT_CONFIG_STATE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, GIT_CONFIG_STATE)
+
+    def on_git_configs(self):
+        """Show GitHub configs as scrollable rows with an individual SET button."""
+        if self.running:
+            messagebox.showwarning(self.t("title"),
+                "Stop the farm before changing the configuration." if self.lang == "en"
+                else "Останови фарм перед сменой конфигурации.")
+            return
+
+        win = tk.Toplevel(self.root)
+        win.title("GitHub configs")
+        win.configure(bg=BG)
+        win.geometry("620x520")
+        win.minsize(480, 360)
+        win.transient(self.root)
+
+        heading = "GitHub configurations" if self.lang == "en" else "Конфигурации GitHub"
+        tk.Label(win, text=heading, bg=BG, fg=TEXT_C, font=FONT_B).pack(anchor="w", padx=18, pady=(16, 8))
+        hint = ("INSTALLED means this exact version is already saved on your PC. Press SET to apply it."
+                if self.lang == "en" else
+                "INSTALLED означает, что эта версия уже скачана. Нажми SET, чтобы применить её.")
+        tk.Label(win, text=hint, bg=BG, fg=MUTED, font=FONT, wraplength=570, justify="left").pack(anchor="w", padx=18, pady=(0, 10))
+
+        list_wrap = tk.Frame(win, bg=BG)
+        list_wrap.pack(fill="both", expand=True, padx=18, pady=4)
+        canvas = tk.Canvas(list_wrap, bg=BG, highlightthickness=0, bd=0)
+        scrollbar = ttk.Scrollbar(list_wrap, orient="vertical", command=canvas.yview)
+        rows_frame = tk.Frame(canvas, bg=BG)
+        rows_frame.bind("<Configure>", lambda _e: canvas.configure(scrollregion=canvas.bbox("all")))
+        window_id = canvas.create_window((0, 0), window=rows_frame, anchor="nw")
+        canvas.bind("<Configure>", lambda e: canvas.itemconfigure(window_id, width=e.width))
+        canvas.configure(yscrollcommand=scrollbar.set)
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        def wheel(event):
+            canvas.yview_scroll(int(-event.delta / 120), "units")
+        canvas.bind("<Enter>", lambda _e: canvas.bind_all("<MouseWheel>", wheel))
+        canvas.bind("<Leave>", lambda _e: canvas.unbind_all("<MouseWheel>"))
+
+        status = tk.Label(win, text=("Loading configs from GitHub..." if self.lang == "en" else "Загружаю конфиги с GitHub..."),
+                          bg=BG, fg=MUTED, font=FONT, anchor="w")
+        status.pack(fill="x", padx=18, pady=(8, 2))
+        progress = ttk.Progressbar(win, mode="indeterminate", length=200)
+        progress.pack(fill="x", padx=18, pady=(0, 10))
+        progress.start(12)
+        footer = tk.Frame(win, bg=BG)
+        footer.pack(fill="x", padx=18, pady=(0, 16))
+        tk.Button(footer, text=("REFRESH" if self.lang == "en" else "ОБНОВИТЬ СПИСОК"), command=lambda: refresh(),
+                  bg=CARD, fg=TEXT_C, relief="flat", padx=14, pady=8).pack(side="left")
+        tk.Button(footer, text=("CLOSE" if self.lang == "en" else "ЗАКРЫТЬ"), command=win.destroy,
+                  bg=CARD, fg=TEXT_C, relief="flat", padx=14, pady=8).pack(side="right")
+
+        def set_status(message):
+            if win.winfo_exists():
+                status.configure(text=message)
+
+        def apply_local(path, name):
+            try:
+                self._apply_config_file(path)
+                set_status((f"SET: {name} — configuration applied." if self.lang == "en" else f"SET: {name} — конфигурация применена."))
+            except Exception as exc:
+                messagebox.showerror("GitHub configs", ("Could not apply config:\n" if self.lang == "en" else "Не удалось применить конфиг:\n") + str(exc), parent=win)
+
+        def download_or_set(item, button):
+            name = item["name"]
+            sha = item.get("sha", "")
+            url = item.get("download_url")
+            if not url:
+                messagebox.showerror("GitHub configs", "No download URL was provided by GitHub.", parent=win)
+                return
+            os.makedirs(GIT_CONFIG_DIR, exist_ok=True)
+            target = os.path.join(GIT_CONFIG_DIR, os.path.basename(name))
+            state = self._read_git_state()
+            old = state.get(name, {}) if isinstance(state.get(name, {}), dict) else {}
+            already_current = os.path.isfile(target) and old.get("sha") == sha
+            if already_current:
+                apply_local(target, name)
+                return
+            if os.path.isfile(target) and old.get("sha") and old.get("sha") != sha:
+                question = (f"{name} has a newer version on GitHub. Download the update?" if self.lang == "en"
+                            else f"Для {name} на GitHub есть новая версия. Скачать обновление?")
+                if not messagebox.askyesno("Config update", question, parent=win):
+                    return
+
+            button.configure(state="disabled", text=("DOWNLOADING..." if self.lang == "en" else "ЗАГРУЗКА..."))
+            progress.stop()
+            progress.configure(mode="indeterminate")
+            progress.start(12)
+            set_status((f"Downloading {name}..." if self.lang == "en" else f"Скачиваю {name}..."))
+
+            def worker():
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "BOB-Farm-GUI"})
+                    with urllib.request.urlopen(req, timeout=35) as response:
+                        content = response.read()
+                    parsed = json.loads(content.decode("utf-8-sig"))
+                    if not isinstance(parsed, dict):
+                        raise ValueError("JSON config must contain an object.")
+                    # Validate before replacing the existing downloaded file.
+                    saved = parsed.get("settings", parsed)
+                    if not isinstance(saved, dict):
+                        raise ValueError("Config settings must be a JSON object.")
+                    candidate = dict(DEFAULTS)
+                    for (_group, key, kind, _default, lo, hi) in SCHEMA:
+                        if key in saved:
+                            candidate[key] = parse_value(kind, saved[key], lo, hi)
+                    errors = cross_check(candidate)
+                    if errors:
+                        raise ValueError("Invalid settings: " + ", ".join(key for key, _ in errors))
+                    tmp = target + ".download"
+                    with open(tmp, "wb") as file:
+                        file.write(content)
+                    os.replace(tmp, target)
+                    state = self._read_git_state()
+                    state[name] = {"sha": sha, "downloaded_at": int(time.time())}
+                    self._write_git_state(state)
+                    self.root.after(0, lambda: finish_download(target, name, button))
+                except Exception as exc:
+                    self.root.after(0, lambda err=str(exc): download_failed(button, err))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def finish_download(path, name, button):
+            if not win.winfo_exists():
+                return
+            progress.stop()
+            progress.configure(mode="determinate", value=100)
+            button.configure(state="normal", text="SET")
+            set_status((f"DOWNLOADED: {name}" if self.lang == "en" else f"СКАЧАНО: {name}"))
+            apply_local(path, name)
+            # Refresh badges so the downloaded item immediately shows INSTALLED.
+            refresh()
+
+        def download_failed(button, error):
+            if not win.winfo_exists():
+                return
+            progress.stop()
+            button.configure(state="normal", text="SET")
+            set_status(("Download failed: " if self.lang == "en" else "Ошибка загрузки: ") + error)
+
+        def refresh():
+            for child in rows_frame.winfo_children():
+                child.destroy()
+            progress.configure(mode="indeterminate")
+            progress.start(12)
+            set_status("Loading configs from GitHub..." if self.lang == "en" else "Загружаю конфиги с GitHub...")
+
+            def worker():
+                try:
+                    raw = self._github_request(GITHUB_API_CONFIGS, timeout=30)
+                    data = json.loads(raw.decode("utf-8"))
+                    if not isinstance(data, list):
+                        raise ValueError("GitHub returned an invalid folder listing.")
+                    files = [x for x in data if isinstance(x, dict) and x.get("type") == "file"
+                             and str(x.get("name", "")).lower().endswith(".json") and x.get("download_url")]
+                    files.sort(key=lambda x: x.get("name", "").lower())
+                    self.root.after(0, lambda: populate(files))
+                except Exception as exc:
+                    self.root.after(0, lambda err=str(exc): (progress.stop(), set_status(("Could not load configs: " if self.lang == "en" else "Не удалось загрузить конфиги: ") + err)))
+            threading.Thread(target=worker, daemon=True).start()
+
+        def populate(files):
+            if not win.winfo_exists():
+                return
+            progress.stop()
+            state = self._read_git_state()
+            for item in files:
+                name, sha = item.get("name", "config.json"), item.get("sha", "")
+                local_path = os.path.join(GIT_CONFIG_DIR, os.path.basename(name))
+                old = state.get(name, {}) if isinstance(state.get(name, {}), dict) else {}
+                installed = os.path.isfile(local_path) and old.get("sha") == sha
+                row = tk.Frame(rows_frame, bg=CARD, highlightbackground=BORDER, highlightthickness=1)
+                row.pack(fill="x", pady=4)
+                tk.Label(row, text=name, bg=CARD, fg=TEXT_C, font=FONT_B, anchor="w").pack(side="left", fill="x", expand=True, padx=12, pady=11)
+                badge_text = "INSTALLED" if installed else ("UPDATE AVAILABLE" if os.path.isfile(local_path) else "NOT INSTALLED")
+                badge_color = ACCENT if installed else MUTED
+                tk.Label(row, text=badge_text, bg=CARD, fg=badge_color, font=FONT_B).pack(side="left", padx=8)
+                btn = tk.Button(row, text="SET", bg=ACCENT, fg="#17120a", activebackground=ACCENT_D,
+                                relief="flat", padx=18, pady=7, cursor="hand2")
+                btn.configure(command=lambda data=item, b=btn: download_or_set(data, b))
+                btn.pack(side="right", padx=10, pady=7)
+            if not files:
+                tk.Label(rows_frame, text=("No .json files found in CONFIGS." if self.lang == "en" else "В CONFIGS не найдено .json файлов."),
+                         bg=BG, fg=MUTED, font=FONT).pack(anchor="w", pady=12)
+            set_status((f"{len(files)} JSON config(s) found." if self.lang == "en" else f"Найдено JSON-конфигов: {len(files)}"))
+
+        refresh()
+
+    def _git_download_complete(self, win, path, name, status, progress, buttons):
+        # Kept for compatibility with older calls; the current GitHub window uses row actions.
+        progress.configure(value=100)
+        status.configure(text=f"DOWNLOADED: {name}")
+        self._apply_config_file(path)
+
+    def _apply_config_file(self, path):
+        with open(path, "r", encoding="utf-8-sig") as f:
+            data = json.load(f)
+        if not isinstance(data, dict): raise ValueError("The config file must contain a JSON object.")
+        saved = data.get("settings", data)
+        if not isinstance(saved, dict): raise ValueError("The config settings must be a JSON object.")
+        cfg = dict(DEFAULTS)
+        for (_, key, kind, default, lo, hi) in SCHEMA:
+            if key in saved: cfg[key] = parse_value(kind, saved[key], lo, hi)
+        errors = cross_check(cfg)
+        if errors: raise ValueError("Invalid settings: " + ", ".join(key for key, _ in errors))
+        save_config(cfg, self.lang)
+        self.cfg = cfg
+        self.fill_fields(cfg)
+        self.log("evt.saved", path=CONFIG_PATH)
+
+    def on_check_updates(self):
+        win = tk.Toplevel(self.root)
+        win.title("BOB Farm updates")
+        win.configure(bg=BG)
+        win.geometry("520x250")
+        win.minsize(460, 220)
+        win.transient(self.root)
+
+        tk.Label(win, text="BOB Farm — Software updates", bg=BG, fg=TEXT_C, font=("Segoe UI Semibold", 15)).pack(pady=(20, 5))
+        tk.Label(win, text=f"Installed version: {APP_VERSION}", bg=BG, fg=MUTED, font=FONT).pack(pady=(0, 12))
+        status = tk.Label(win, text=("Checking GitHub for a new version..." if self.lang == "en" else "Проверяю GitHub на наличие новой версии..."),
+                          bg=BG, fg=TEXT_C, font=FONT, wraplength=470, justify="center")
+        status.pack(fill="x", padx=20, pady=8)
+        progress = ttk.Progressbar(win, mode="indeterminate", length=400)
+        progress.pack(fill="x", padx=35, pady=8)
+        progress.start(12)
+        actions = tk.Frame(win, bg=BG)
+        actions.pack(fill="x", padx=20, pady=(12, 18))
+        close_btn = tk.Button(actions, text=("CLOSE" if self.lang == "en" else "ЗАКРЫТЬ"), command=win.destroy,
+                              bg=CARD, fg=TEXT_C, relief="flat", padx=18, pady=9)
+        close_btn.pack(side="right")
+
+        def worker():
+            try:
+                remote = self._github_request(GITHUB_GUI_RAW, timeout=35).decode("utf-8-sig")
+                match = re.search(r'^APP_VERSION\s*=\s*[\"\']([^\"\']+)[\"\']', remote, re.MULTILINE)
+                if not match:
+                    raise ValueError('APP_VERSION was not found in GUI/bob_farm_gui.py.')
+                remote_version = match.group(1).strip()
+                self.root.after(0, lambda: finish_check(remote, remote_version))
+            except Exception as exc:
+                self.root.after(0, lambda err=str(exc): (progress.stop(), status.configure(text=("Could not check for updates: " if self.lang == "en" else "Не удалось проверить обновления: ") + err)))
+
+        def finish_check(remote_source, remote_version):
+            if not win.winfo_exists():
+                return
+            progress.stop()
+            if remote_version == APP_VERSION:
+                status.configure(text=(f"You're up to date. Version {APP_VERSION} is installed." if self.lang == "en" else f"Обновлений нет. Установлена версия {APP_VERSION}."))
+                return
+            status.configure(text=(f"New version available: {APP_VERSION}  →  {remote_version}" if self.lang == "en" else f"Доступна новая версия: {APP_VERSION}  →  {remote_version}"))
+            update_btn = tk.Button(actions, text=("DOWNLOAD UPDATE" if self.lang == "en" else "СКАЧАТЬ ОБНОВЛЕНИЕ"),
+                                   bg=ACCENT, fg="#17120a", activebackground=ACCENT_D, relief="flat", padx=16, pady=9)
+            update_btn.pack(side="left")
+
+            def install_update():
+                try:
+                    compile(remote_source, "bob_farm_gui.py", "exec")
+                    current_file = os.path.abspath(__file__)
+                    tmp = current_file + ".update.tmp"
+                    with open(tmp, "w", encoding="utf-8") as file:
+                        file.write(remote_source)
+                    os.replace(tmp, current_file)
+                    status.configure(text=(f"Update {remote_version} downloaded successfully. Restart BOB Farm to use it." if self.lang == "en"
+                                           else f"Обновление {remote_version} скачано. Перезапусти BOB Farm."))
+                    update_btn.configure(state="disabled", text=("UPDATED" if self.lang == "en" else "ОБНОВЛЕНО"))
+                except Exception as exc:
+                    status.configure(text=("Update failed: " if self.lang == "en" else "Ошибка обновления: ") + str(exc))
+            update_btn.configure(command=install_update)
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def on_choose_config(self):
         if self.running:
             messagebox.showwarning(
@@ -1298,32 +1603,7 @@ class App:
             return
 
         try:
-            with open(path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-
-            if not isinstance(data, dict):
-                raise ValueError("The config file must contain a JSON object.")
-
-            saved = data.get("settings", data)
-            if not isinstance(saved, dict):
-                raise ValueError("The config settings must be a JSON object.")
-
-            cfg = dict(DEFAULTS)
-            for (_, key, kind, default, lo, hi) in SCHEMA:
-                if key in saved:
-                    cfg[key] = parse_value(kind, saved[key], lo, hi)
-
-            errors = cross_check(cfg)
-            if errors:
-                names = ", ".join(key for key, _ in errors)
-                raise ValueError(f"Invalid settings: {names}")
-
-            # Replace the main config with the selected config automatically.
-            save_config(cfg, self.lang)
-            self.cfg = cfg
-            self.fill_fields(cfg)
-
-            self.log("evt.saved", path=CONFIG_PATH)
+            self._apply_config_file(path)
             messagebox.showinfo(
                 self.t("title"),
                 "Configuration loaded and saved as the main config."
@@ -1333,8 +1613,8 @@ class App:
         except Exception as e:
             messagebox.showerror(
                 self.t("title"),
-                ("Could not load configuration:\\n" if self.lang == "en"
-                 else "Не удалось загрузить конфигурацию:\\n") + str(e)
+                ("Could not load configuration:\n" if self.lang == "en"
+                 else "Не удалось загрузить конфигурацию:\n") + str(e)
             )
 
     def on_reset(self):
@@ -1433,12 +1713,13 @@ class App:
         self.set_enabled(self.stop_btn, False)
         self.preview_label.configure(image="", text=self.t("preview.off"), height=12)
 
-    # ---------- keep this window out of the screen capture ----------
+    # ---------- allow screenshots / screen recording ----------
     def exclude_from_capture(self):
+        # WDA_NONE (0) explicitly allows Windows screenshots and screen capture.
         try:
             self.root.update_idletasks()
             hwnd = user32.GetParent(self.root.winfo_id())
-            user32.SetWindowDisplayAffinity(hwnd, 0x11)     # WDA_EXCLUDEFROMCAPTURE
+            user32.SetWindowDisplayAffinity(hwnd, 0)
         except Exception:
             pass
 
