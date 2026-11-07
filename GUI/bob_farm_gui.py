@@ -220,7 +220,7 @@ TEXT = {
         "lang": "Language",
         "tab.settings": "Settings", "tab.requirements": "Requirements",
         "btn.start": "Start", "btn.stop": "Stop", "btn.save": "Save settings", "btn.reset": "Reset to defaults",
-        "btn.choose_config": "Choose config",
+        "btn.choose_config": "Choose config", "btn.export_config": "Export config",
         "status.idle": "Idle", "status.starting": "Starting - click into Roblox", "status.running": "Running",
         "status.stopping": "Stopping...",
         "preview.title": "Live preview", "preview.off": "Preview is off", "preview.wait": "Waiting for the first frame...",
@@ -313,7 +313,7 @@ TEXT = {
         "lang": "Язык",
         "tab.settings": "Настройки", "tab.requirements": "Требования",
         "btn.start": "Старт", "btn.stop": "Стоп", "btn.save": "Сохранить настройки", "btn.reset": "Сбросить по умолчанию",
-        "btn.choose_config": "Выбрать конфиг",
+        "btn.choose_config": "Выбрать конфиг", "btn.export_config": "Экспорт конфига",
         "status.idle": "Ожидание", "status.starting": "Запуск - кликни в окно Roblox", "status.running": "Работает",
         "status.stopping": "Останавливаю...",
         "preview.title": "Превью", "preview.off": "Превью выключено", "preview.wait": "Жду первый кадр...",
@@ -1041,6 +1041,7 @@ class App:
         self.button(bar, "btn.save", self.on_save, accent=True).pack(side="left")
         self.button(bar, "btn.reset", self.on_reset).pack(side="left", padx=(10, 0))
         self.button(bar, "btn.choose_config", self.on_choose_config).pack(side="left", padx=(10, 0))
+        self.button(bar, "btn.export_config", self.on_export_config).pack(side="left", padx=(10, 0))
         wrap, inner = self.make_scrollable(tab_settings)
         wrap.pack(fill="both", expand=True, pady=(12, 0))
         self.build_settings(inner)
@@ -1241,6 +1242,41 @@ class App:
         except Exception as e:
             self.log("evt.save_failed", err=str(e))
         return True
+
+    def on_export_config(self):
+        """Export the current settings as a standalone JSON file for sharing."""
+        cfg, errors = self.collect()
+        if errors:
+            self.show_errors(errors)
+            return
+
+        path = filedialog.asksaveasfilename(
+            title="Export configuration" if self.lang == "en" else "Экспорт конфигурации",
+            defaultextension=".json",
+            initialfile="bob_farm_config.json",
+            filetypes=[("JSON config", "*.json"), ("All files", "*.*")]
+        )
+        if not path:
+            return
+
+        try:
+            data = {"config_version": CONFIG_VERSION, "language": self.lang, "settings": cfg}
+            with open(path, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+            self.cfg = cfg
+            self.log("evt.saved", path=path)
+            messagebox.showinfo(
+                self.t("title"),
+                ("Configuration exported successfully. You can send this JSON file to your friend."
+                 if self.lang == "en" else
+                 "Конфигурация успешно экспортирована. Теперь можешь отправить этот JSON-файл другу.")
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.t("title"),
+                ("Could not export configuration:\n" if self.lang == "en" else
+                 "Не удалось экспортировать конфигурацию:\n") + str(e)
+            )
 
     def on_choose_config(self):
         if self.running:
