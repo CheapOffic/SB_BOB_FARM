@@ -23,7 +23,7 @@ from ctypes import wintypes
 
 try:
     import tkinter as tk
-    from tkinter import ttk, messagebox
+    from tkinter import ttk, messagebox, filedialog
 except ImportError:
     print("tkinter is missing. Reinstall Python and tick the 'tcl/tk and IDLE' option.")
     raise SystemExit(1)
@@ -220,6 +220,7 @@ TEXT = {
         "lang": "Language",
         "tab.settings": "Settings", "tab.requirements": "Requirements",
         "btn.start": "Start", "btn.stop": "Stop", "btn.save": "Save settings", "btn.reset": "Reset to defaults",
+        "btn.choose_config": "Choose config",
         "status.idle": "Idle", "status.starting": "Starting - click into Roblox", "status.running": "Running",
         "status.stopping": "Stopping...",
         "preview.title": "Live preview", "preview.off": "Preview is off", "preview.wait": "Waiting for the first frame...",
@@ -312,6 +313,7 @@ TEXT = {
         "lang": "Язык",
         "tab.settings": "Настройки", "tab.requirements": "Требования",
         "btn.start": "Старт", "btn.stop": "Стоп", "btn.save": "Сохранить настройки", "btn.reset": "Сбросить по умолчанию",
+        "btn.choose_config": "Выбрать конфиг",
         "status.idle": "Ожидание", "status.starting": "Запуск - кликни в окно Roblox", "status.running": "Работает",
         "status.stopping": "Останавливаю...",
         "preview.title": "Превью", "preview.off": "Превью выключено", "preview.wait": "Жду первый кадр...",
@@ -1038,6 +1040,7 @@ class App:
         bar.pack(side="bottom", fill="x", pady=(10, 0))
         self.button(bar, "btn.save", self.on_save, accent=True).pack(side="left")
         self.button(bar, "btn.reset", self.on_reset).pack(side="left", padx=(10, 0))
+        self.button(bar, "btn.choose_config", self.on_choose_config).pack(side="left", padx=(10, 0))
         wrap, inner = self.make_scrollable(tab_settings)
         wrap.pack(fill="both", expand=True, pady=(12, 0))
         self.build_settings(inner)
@@ -1238,6 +1241,65 @@ class App:
         except Exception as e:
             self.log("evt.save_failed", err=str(e))
         return True
+
+    def on_choose_config(self):
+        if self.running:
+            messagebox.showwarning(
+                self.t("title"),
+                "Stop the farm before changing the configuration." if self.lang == "en"
+                else "Останови фарм перед сменой конфигурации."
+            )
+            return
+
+        path = filedialog.askopenfilename(
+            title="Choose configuration" if self.lang == "en" else "Выбери конфигурацию",
+            filetypes=[
+                ("JSON config", "*.json"),
+                ("All files", "*.*")
+            ]
+        )
+        if not path:
+            return
+
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+
+            if not isinstance(data, dict):
+                raise ValueError("The config file must contain a JSON object.")
+
+            saved = data.get("settings", data)
+            if not isinstance(saved, dict):
+                raise ValueError("The config settings must be a JSON object.")
+
+            cfg = dict(DEFAULTS)
+            for (_, key, kind, default, lo, hi) in SCHEMA:
+                if key in saved:
+                    cfg[key] = parse_value(kind, saved[key], lo, hi)
+
+            errors = cross_check(cfg)
+            if errors:
+                names = ", ".join(key for key, _ in errors)
+                raise ValueError(f"Invalid settings: {names}")
+
+            # Replace the main config with the selected config automatically.
+            save_config(cfg, self.lang)
+            self.cfg = cfg
+            self.fill_fields(cfg)
+
+            self.log("evt.saved", path=CONFIG_PATH)
+            messagebox.showinfo(
+                self.t("title"),
+                "Configuration loaded and saved as the main config."
+                if self.lang == "en"
+                else "Конфигурация загружена и сохранена как основной конфиг."
+            )
+        except Exception as e:
+            messagebox.showerror(
+                self.t("title"),
+                ("Could not load configuration:\\n" if self.lang == "en"
+                 else "Не удалось загрузить конфигурацию:\\n") + str(e)
+            )
 
     def on_reset(self):
         self.fill_fields(DEFAULTS)
