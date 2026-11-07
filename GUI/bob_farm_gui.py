@@ -40,11 +40,12 @@ pdi.FAILSAFE = False
 
 CONFIG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bob_farm_config.json")
 CONFIG_VERSION = 2
-APP_VERSION = "V1.1"
+APP_VERSION = "V1.2"
 GITHUB_API_CONFIGS = "https://api.github.com/repos/CheapOffic/SB_BOB_FARM/contents/CONFIGS?ref=main"
 GITHUB_GUI_RAW = "https://raw.githubusercontent.com/CheapOffic/SB_BOB_FARM/main/GUI/bob_farm_gui.py"
 GIT_CONFIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "GIT_CONFIGS")
 GIT_CONFIG_STATE = os.path.join(GIT_CONFIG_DIR, ".download_state.json")
+THEME_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "bob_farm_theme.json")
 MIGRATE_RESET = ("search_spin", "search_speed", "jump_while_walking")   # reset to the new defaults when an older file is loaded
 STOP_KEY_VK = 0x77            # F8
 WINDOW_TITLE = "Roblox"
@@ -893,6 +894,25 @@ class Engine:
 BG, PANEL, CARD, BORDER = "#12141a", "#181b23", "#1f232d", "#2c3240"
 TEXT_C, MUTED, ACCENT, ACCENT_D = "#e9ecf4", "#8d95a8", "#ff8a1f", "#e5700a"
 GREEN, RED, ENTRY_BG = "#3ecf8e", "#ff5d6c", "#14171f"
+
+# Built-in themes. Custom themes can be included in any config JSON under the "theme" key.
+THEMES = {
+    "Midnight Orange": {"bg":"#12141a","panel":"#181b23","card":"#1f232d","border":"#2c3240","text":"#e9ecf4","muted":"#8d95a8","accent":"#ff8a1f","accent_dark":"#e5700a","entry":"#14171f"},
+    "Ocean Blue": {"bg":"#0b1420","panel":"#102235","card":"#163047","border":"#24506a","text":"#e5f5ff","muted":"#91b5c9","accent":"#28b8ff","accent_dark":"#1389c4","entry":"#0c1d2b"},
+    "Purple Haze": {"bg":"#171020","panel":"#21152f","card":"#2c1d40","border":"#49305f","text":"#f4eaff","muted":"#b9a2cc","accent":"#bd79ff","accent_dark":"#9254d1","entry":"#1d1428"},
+    "Crimson": {"bg":"#1b1014","panel":"#29151c","card":"#381c26","border":"#63303e","text":"#ffeef1","muted":"#c49aa5","accent":"#ff4968","accent_dark":"#d52d4b","entry":"#211319"},
+    "Emerald": {"bg":"#0d1915","panel":"#14251e","card":"#1b3329","border":"#315b48","text":"#e8fff3","muted":"#9bbdab","accent":"#35d69a","accent_dark":"#1ca978","entry":"#102019"},
+    "Gold": {"bg":"#19160d","panel":"#282212","card":"#393019","border":"#62512a","text":"#fff8e5","muted":"#c6b98f","accent":"#ffc94a","accent_dark":"#d99d20","entry":"#211b0e"},
+    "Rose": {"bg":"#1c1118","panel":"#2a1823","card":"#3a2130","border":"#634056","text":"#fff0f7","muted":"#c8a4b7","accent":"#ff83bd","accent_dark":"#d85b98","entry":"#24151e"},
+    "Cyberpunk": {"bg":"#100f1d","panel":"#19172b","card":"#24213d","border":"#45406f","text":"#f4f0ff","muted":"#aaa4d1","accent":"#e84dff","accent_dark":"#b52bd0","entry":"#171426"},
+    "Arctic": {"bg":"#eaf2f7","panel":"#dce8f0","card":"#ffffff","border":"#b9cbd8","text":"#182b38","muted":"#607887","accent":"#168bc4","accent_dark":"#096b9b","entry":"#f5f9fc"},
+    "Paper": {"bg":"#f1eee7","panel":"#e5e0d5","card":"#fffdf7","border":"#c9c1b1","text":"#29261f","muted":"#777064","accent":"#d56b27","accent_dark":"#a94d16","entry":"#fffaf0"},
+    "Forest": {"bg":"#101812","panel":"#19251b","card":"#233326","border":"#405b43","text":"#eff8ed","muted":"#a8b9a4","accent":"#a6d65c","accent_dark":"#7ca638","entry":"#172119"},
+    "Neon Mint": {"bg":"#0c1718","panel":"#102526","card":"#163334","border":"#28605c","text":"#eafffc","muted":"#91c4be","accent":"#46f0cf","accent_dark":"#21bda4","entry":"#102021"},
+    "Slate": {"bg":"#171a1f","panel":"#20252c","card":"#2a3039","border":"#414b58","text":"#edf1f5","muted":"#a2adba","accent":"#9db4ce","accent_dark":"#718ba8","entry":"#1b2027"},
+    "Sunset": {"bg":"#1b1218","panel":"#2b1a20","card":"#3a2428","border":"#68403b","text":"#fff1e8","muted":"#c7a69a","accent":"#ff9b59","accent_dark":"#df6d39","entry":"#24171b"},
+}
+THEME_KEYS = ("bg", "panel", "card", "border", "text", "muted", "accent", "accent_dark", "entry")
 FONT, FONT_B, FONT_S = ("Segoe UI", 10), ("Segoe UI Semibold", 10), ("Segoe UI", 9)
 
 
@@ -909,6 +929,11 @@ class App:
         self.i18n = []              # (widget, key, option, kind)
         self.fields = {}            # key -> dict(kind, get, set, widget)
         self.sysinfo = get_system_info()
+        self.theme_name, self.theme_colors = self.load_theme()
+        global BG, PANEL, CARD, BORDER, TEXT_C, MUTED, ACCENT, ACCENT_D, ENTRY_BG
+        BG, PANEL, CARD, BORDER = (self.theme_colors[k] for k in ("bg", "panel", "card", "border"))
+        TEXT_C, MUTED, ACCENT, ACCENT_D, ENTRY_BG = (self.theme_colors[k] for k in ("text", "muted", "accent", "accent_dark", "entry"))
+        self.theme_color_map = {}
 
         root.title("BOB Farm")
         root.configure(bg=BG)
@@ -1020,6 +1045,11 @@ class App:
         self.reg(tk.Label(titles, bg=BG, fg=MUTED, font=FONT), "subtitle").pack(anchor="w")
         right = tk.Frame(h, bg=BG)
         right.pack(side="right")
+        tk.Label(right, text="Theme", bg=BG, fg=MUTED, font=FONT).pack(side="left", padx=(0, 6))
+        self.theme_box = ttk.Combobox(right, values=list(THEMES.keys()) + ["Custom"], state="readonly", width=15, font=FONT)
+        self.theme_box.set(self.theme_name)
+        self.theme_box.pack(side="left", padx=(0, 16))
+        self.theme_box.bind("<<ComboboxSelected>>", self.on_theme_selected)
         self.reg(tk.Label(right, bg=BG, fg=MUTED, font=FONT), "lang").pack(side="left", padx=(0, 8))
         self.lang_box = ttk.Combobox(right, values=["English", "Русский"], state="readonly", width=11, font=FONT)
         self.lang_box.set("English" if self.lang == "en" else "Русский")
@@ -1271,7 +1301,7 @@ class App:
             return
 
         try:
-            data = {"config_version": CONFIG_VERSION, "language": self.lang, "settings": cfg}
+            data = {"config_version": CONFIG_VERSION, "language": self.lang, "settings": cfg, "theme_name": self.theme_name, "theme": self.current_theme_payload()}
             with open(path, "w", encoding="utf-8") as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
             self.cfg = cfg
@@ -1288,6 +1318,90 @@ class App:
                 ("Could not export configuration:\n" if self.lang == "en" else
                  "Не удалось экспортировать конфигурацию:\n") + str(e)
             )
+
+    def load_theme(self):
+        try:
+            with open(THEME_PATH, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            name = data.get("name", "Midnight Orange")
+            colors = data.get("colors", {})
+            if isinstance(colors, dict) and all(k in colors for k in THEME_KEYS):
+                return name, {k: str(colors[k]) for k in THEME_KEYS}
+            if name in THEMES:
+                return name, dict(THEMES[name])
+        except Exception:
+            pass
+        return "Midnight Orange", dict(THEMES["Midnight Orange"])
+
+    def current_theme_payload(self):
+        return dict(self.theme_colors)
+
+    def save_theme(self):
+        tmp = THEME_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump({"name": self.theme_name, "colors": self.theme_colors}, f, indent=2, ensure_ascii=False)
+        os.replace(tmp, THEME_PATH)
+
+    def on_theme_selected(self, _event=None):
+        name = self.theme_box.get()
+        if name in THEMES:
+            self.apply_theme(name)
+
+    def apply_theme(self, name):
+        if name not in THEMES:
+            return
+        self.theme_name = name
+        self.apply_custom_theme(THEMES[name], name)
+
+    def apply_custom_theme(self, colors, name="Custom"):
+        global BG, PANEL, CARD, BORDER, TEXT_C, MUTED, ACCENT, ACCENT_D, ENTRY_BG
+        if not isinstance(colors, dict) or not all(k in colors for k in THEME_KEYS):
+            raise ValueError("Theme must define: " + ", ".join(THEME_KEYS))
+        # Validate color strings before applying them to Tk.
+        for key in THEME_KEYS:
+            value = str(colors[key])
+            if not re.fullmatch(r"#[0-9a-fA-F]{6}", value):
+                raise ValueError(f"Invalid theme color for {key}: {value}")
+        old = {"bg":BG,"panel":PANEL,"card":CARD,"border":BORDER,"text":TEXT_C,"muted":MUTED,
+               "accent":ACCENT,"accent_dark":ACCENT_D,"entry":ENTRY_BG}
+        new = {k:str(colors[k]) for k in THEME_KEYS}
+        mapping = dict(zip(old.values(), new.values()))
+        BG, PANEL, CARD, BORDER = new["bg"], new["panel"], new["card"], new["border"]
+        TEXT_C, MUTED, ACCENT, ACCENT_D, ENTRY_BG = new["text"], new["muted"], new["accent"], new["accent_dark"], new["entry"]
+        self.theme_name, self.theme_colors = name, new
+        def recolor(widget):
+            for option in ("bg", "background", "fg", "foreground", "activebackground", "activeforeground",
+                           "highlightbackground", "insertbackground", "selectbackground", "troughcolor"):
+                try:
+                    value = widget.cget(option)
+                    if value in mapping:
+                        widget.configure(**{option:mapping[value]})
+                except Exception:
+                    pass
+            try:
+                if hasattr(widget, "_colors"):
+                    widget._colors = tuple(mapping.get(v, v) for v in widget._colors)
+            except Exception:
+                pass
+            for child in widget.winfo_children():
+                recolor(child)
+        recolor(self.root)
+        st = ttk.Style(self.root)
+        st.configure(".", background=BG, foreground=TEXT_C, font=FONT)
+        st.configure("TNotebook", background=BG, borderwidth=0)
+        st.configure("TNotebook.Tab", background=PANEL, foreground=MUTED, padding=(20, 9), borderwidth=0, font=FONT_B)
+        st.map("TNotebook.Tab", background=[("selected", CARD)], foreground=[("selected", ACCENT)])
+        st.configure("Dark.TCheckbutton", background=CARD, foreground=TEXT_C, focuscolor=CARD, font=FONT)
+        st.configure("TCombobox", fieldbackground=ENTRY_BG, background=PANEL, foreground=TEXT_C, arrowcolor=ACCENT)
+        self.root.option_add("*TCombobox*Listbox.background", ENTRY_BG)
+        self.root.option_add("*TCombobox*Listbox.foreground", TEXT_C)
+        self.root.option_add("*TCombobox*Listbox.selectBackground", ACCENT)
+        self.root.option_add("*TCombobox*Listbox.selectForeground", TEXT_C)
+        try:
+            self.theme_box.set(name if name in THEMES else "Custom")
+            self.save_theme()
+        except Exception:
+            pass
 
     def _github_request(self, url, timeout=25):
         req = urllib.request.Request(url, headers={
@@ -1519,6 +1633,13 @@ class App:
         save_config(cfg, self.lang)
         self.cfg = cfg
         self.fill_fields(cfg)
+        theme_data = data.get("theme")
+        if isinstance(theme_data, dict):
+            theme_colors = theme_data.get("colors", theme_data)
+            theme_name = theme_data.get("name", data.get("theme_name", "Custom"))
+            self.apply_custom_theme(theme_colors, theme_name)
+        elif isinstance(theme_data, str) and theme_data in THEMES:
+            self.apply_theme(theme_data)
         self.log("evt.saved", path=CONFIG_PATH)
 
     def on_check_updates(self):
