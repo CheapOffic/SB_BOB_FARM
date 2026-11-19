@@ -2,7 +2,7 @@ NAME = "Reset right after E"
 DESCRIPTION = "The bot presses E inside the portal and the character is reset immediately after it (Esc, R, Enter)."
 
 RESET_DELAY = 0.0        # seconds between pressing E and the reset (0 = right away)
-WAIT_AFTER_RESET = 4.0   # seconds to wait after the reset, before the bot goes on (respawn time)
+WAIT_AFTER_RESET = 1.5   # seconds to wait after the reset, before the bot goes on (respawn time)
 
 
 def setup(ctx):
