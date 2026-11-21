@@ -1,230 +1,201 @@
-# BOB Farm — V1.5.6
+# BOB Farm — GUI
 
-**A desktop GUI project with configurable settings, session tracking, reports, and multilingual interface support.**
+**BOB Farm V1.5.6** is the graphical version of the BOB Farm project. The application brings its options, status, reports, and statistics together in one desktop interface.
 
-Languages: [English](#english) | [Русский](#русский) | [Українська](#українська)
+## What's new in V1.5.6
 
----
+- Expanded statistics and reporting sections.
+- Statistics categories for daily, weekly, current-session, application-session, and lifetime summaries.
+- Separate tracking for application runtime and an individual farm session.
+- Persistent statistics storage intended to keep accumulated data across restarts.
+- More detailed Reports output.
+- Expanded Telegram report information and language synchronization with the selected UI language.
+- Improved settings organization and configuration handling.
+- Localization updates for English and Russian, plus updated Ukrainian README documentation.
+- General interface, data-handling, and stability improvements.
 
-<a name="english"></a>
-## English
+## Languages
 
-### Overview
-
-BOB Farm is a Windows desktop application with a graphical interface and configurable preferences. This README describes the V1.5.6 release and the project's main areas. Feature descriptions reflect the release notes; individual features may depend on the current build.
-
-
-### V1.5.6 — What's new
-
-- **Statistics:** expanded statistics views for daily, weekly, current-session, application-session, and lifetime summaries.
-- **Session tracking:** application uptime and activity-session duration are tracked separately to make summaries clearer.
-- **Persistence:** statistics are designed to carry over between launches rather than being limited to one run.
-- **Reports:** the Reports area provides a more structured overview of accumulated and session information.
-- **Telegram integration:** report messages include additional summary information and follow the selected application language.
-- **Settings:** settings organization and synchronization have been improved; supported changes can be applied without restarting.
-- **Localization:** English and Russian text coverage and consistency have been improved.
-- **Reliability:** general internal cleanup and error-handling improvements.
-
-### Highlights
-
-- Graphical desktop interface
-- Editable preferences with saved configuration
-- English and Russian interface options
-- Reports and summary views
-- Separate application and session tracking
-- Persistent statistics
-- Telegram report support
-- Hardware/system information page
-- Preview and diagnostic views, where available in the build
-
-### Requirements
-
-- Windows 10 or Windows 11 (64-bit)
-- Python 3.9+ (if running from source)
-- Tkinter-enabled Python installation
-- Dependencies listed in `requirements.txt`
-
-### Installation
-
-Install the project's Python dependencies from the repository folder:
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### Running from source
-
-```bash
-python bob_farm_gui.py
-```
-
-The exact entry-point filename may differ between repository builds. Use the file included in your checkout.
-
-### Configuration and data
-
-- User preferences are stored locally in the application's configuration file.
-- Configuration files are created or updated by the application as applicable.
-- Statistics storage is intended to persist across application launches in V1.5.x.
-- Back up configuration and statistics files before replacing or updating a build.
-
-### Languages
-
-- English
-- Russian
-
-Ukrainian README translation is included below; the application's Ukrainian interface is not confirmed to be available in this release.
-
-### Disclaimer
-
-This is an independent project. Automated interaction with third-party games or services may violate their rules and can lead to account restrictions. Review the relevant terms and use software responsibly. This repository is not affiliated with Roblox or Slap Battles.
-
-
----
-
-<a name="русский"></a>
-## Русский
-
-### О проекте
-
-BOB Farm — десктопное приложение для Windows с графическим интерфейсом и настраиваемыми параметрами. Этот README описывает версию V1.5.6 и основные части проекта. Описание возможностей основано на заметках к обновлению; доступность отдельных функций зависит от конкретной сборки.
-
-
-### V1.5.6 — Что нового
-
-- **Статистика:** расширены сводки за день, неделю, текущую сессию, запуск приложения и всё время.
-- **Отслеживание сессий:** время работы приложения и длительность отдельной сессии учитываются независимо.
-- **Сохранение данных:** статистика рассчитана на сохранение между запусками, а не только на один сеанс.
-- **Отчёты:** раздел Reports стал более структурированным и содержит больше информации о сессиях и накопленных результатах.
-- **Telegram:** в сообщения добавлена дополнительная сводная информация; язык сообщений синхронизируется с языком приложения.
-- **Настройки:** улучшена организация настроек и их синхронизация; поддерживаемые изменения можно применять без перезапуска.
-- **Локализация:** улучшены полнота и согласованность английского и русского текстов.
-- **Надёжность:** проведены внутренние улучшения и доработана обработка ошибок.
-
-### Основные возможности
-
-- Графический интерфейс
-- Настраиваемые параметры с сохранением
-- Английский и русский языки интерфейса
-- Отчёты и статистические сводки
-- Раздельный учёт времени приложения и сессии
-- Сохраняемая статистика
-- Отправка отчётов через Telegram
-- Раздел с информацией о системе и оборудовании
-- Превью и диагностические окна, если они доступны в сборке
-
-### Требования
-
-- Windows 10 или Windows 11 (64-бит)
-- Python 3.9+ (при запуске из исходников)
-- Python с Tkinter
-- Зависимости из `requirements.txt`
-
-### Установка
-
-Установи Python-зависимости из папки репозитория:
-
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-### Запуск из исходников
-
-```bash
-python bob_farm_gui.py
-```
-
-Имя главного файла может отличаться в разных сборках. Используй файл, который находится в твоей версии репозитория.
-
-### Настройки и данные
-
-- Пользовательские настройки сохраняются локально в конфигурационном файле приложения.
-- Файлы настроек создаются или обновляются программой, когда это необходимо.
-- В V1.5.x статистика рассчитана на сохранение между запусками.
-- Перед заменой или обновлением сборки рекомендуется сделать резервную копию конфигурации и файлов статистики.
-
-### Языки
-
+The README is available in:
 - English
 - Русский
+- Українська
 
-Перевод README на украинский добавлен ниже; наличие украинского языка в интерфейсе этой версии не подтверждено.
+## Files
 
-### Отказ от ответственности
+| File | Description |
+|---|---|
+| `bob_farm_gui.py` | Main GUI application entry point. |
+| `bob_farm_config.json` | User configuration file; created/updated by the application when supported. |
+| `requirements.txt` | Python package dependencies, if included in the repository. |
 
-Это независимый проект. Автоматизированное взаимодействие с сторонними играми или сервисами может нарушать их правила и привести к ограничениям аккаунта. Ознакомься с соответствующими условиями и используй программы ответственно. Репозиторий не связан с Roblox или Slap Battles.
+
+## Requirements
+
+- Windows 10 or Windows 11, 64-bit
+- Python 3.9+ (with Tkinter available)
+- Packages listed in `requirements.txt`, if provided
+
+## Installation
+
+1. Install Python and ensure it is available from your terminal (`python --version`).
+2. Open a terminal in this folder.
+3. Install dependencies:
+
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+   If no `requirements.txt` is present, install the packages listed by the project maintainers.
+
+## Launch
+
+Run the GUI entry point from a terminal in the project directory:
+
+```cmd
+python bob_farm_gui.py
+```
+
+## Configuration and data
+
+Application settings and statistics may be stored locally in configuration/data files. Keep a backup of these files before replacing the application or troubleshooting saved settings.
+
+## Disclaimer
+
+This project is provided for educational purposes. Automated gameplay may violate a game's rules or terms of service and could result in account penalties. Use the project responsibly and at your own risk.
 
 
 ---
 
-<a name="українська"></a>
-## Українська
+# Русский
 
-### Про проєкт
+**BOB Farm V1.5.6** — графическая версия проекта BOB Farm. В приложении собраны настройки, состояние программы, отчёты и статистика.
 
-BOB Farm — десктопна програма для Windows із графічним інтерфейсом та налаштовуваними параметрами. Цей README описує версію V1.5.6 та основні частини проєкту. Опис можливостей базується на нотатках до оновлення; наявність окремих функцій залежить від конкретної збірки.
+## Что нового в V1.5.6
+
+- Расширены разделы статистики и отчётов.
+- Добавлены категории статистики: за день, неделю, текущую сессию, сессию работы приложения и всё время.
+- Время работы приложения и отдельной сессии отслеживается раздельно.
+- Добавлено постоянное хранение статистики, рассчитанное на сохранение накопленных данных между перезапусками.
+- Отчёты стали подробнее.
+- Telegram-отчёты дополнены данными, а язык сообщений синхронизируется с языком интерфейса.
+- Улучшена организация настроек и работа с конфигурацией.
+- Обновлена локализация: английский и русский интерфейсы, а также документация на украинском.
+- Общие улучшения интерфейса, обработки данных и стабильности.
+
+## Языки
+
+README доступен на английском, русском и украинском языках.
 
 
-### V1.5.6 — Що нового
+## Файлы
 
-- **Статистика:** розширено зведення за день, тиждень, поточну сесію, запуск програми та весь час.
-- **Облік сесій:** час роботи програми та тривалість окремої сесії обліковуються незалежно.
-- **Збереження даних:** статистика має зберігатися між запусками, а не лише протягом одного сеансу.
-- **Звіти:** розділ Reports став структурованішим і містить більше даних про сесії та накопичені результати.
-- **Telegram:** повідомлення містять додаткову зведену інформацію; мова повідомлень синхронізується з мовою програми.
-- **Налаштування:** покращено організацію параметрів та їх синхронізацію; підтримувані зміни можна застосовувати без перезапуску.
-- **Локалізація:** покращено повноту й узгодженість англійських та російських текстів.
-- **Надійність:** виконано внутрішні покращення та доопрацьовано обробку помилок.
+| Файл | Описание |
+|---|---|
+| `bob_farm_gui.py` | Основной файл запуска GUI. |
+| `bob_farm_config.json` | Файл настроек; создаётся/обновляется приложением, если это предусмотрено. |
+| `requirements.txt` | Список Python-зависимостей, если он присутствует в репозитории. |
 
-### Основні можливості
 
-- Графічний інтерфейс
-- Налаштовувані параметри зі збереженням
-- Англійська та російська мови інтерфейсу
-- Звіти та статистичні зведення
-- Окремий облік часу програми та сесії
-- Статистика зі збереженням
-- Надсилання звітів через Telegram
-- Розділ з інформацією про систему та обладнання
-- Попередній перегляд і діагностичні вікна, якщо вони доступні у збірці
+## Требования
 
-### Вимоги
+- Windows 10 или Windows 11, 64-bit
+- Python 3.9+ (с доступным Tkinter)
+- Python-пакеты из `requirements.txt`, если файл есть в репозитории
 
-- Windows 10 або Windows 11 (64-біт)
-- Python 3.9+ (для запуску з вихідного коду)
-- Python із Tkinter
-- Залежності з `requirements.txt`
+## Установка
 
-### Встановлення
+1. Установи Python и проверь, что он доступен в терминале (`python --version`).
+2. Открой терминал в этой папке.
+3. Установи зависимости:
 
-Встанови залежності Python у папці репозиторію:
+   ```cmd
+   pip install -r requirements.txt
+   ```
 
-```bash
-python -m pip install -r requirements.txt
-```
+   Если `requirements.txt` отсутствует, установи пакеты, указанные разработчиками проекта.
 
-### Запуск із вихідного коду
+## Запуск
 
-```bash
+В терминале, открытом в папке проекта, выполни:
+
+
+```cmd
 python bob_farm_gui.py
 ```
 
-Назва головного файлу може відрізнятися в різних збірках. Використовуй файл, що входить до твоєї версії репозиторію.
+## Настройки и данные
 
-### Налаштування та дані
+Настройки и статистика могут храниться локально в конфигурационных файлах. Перед заменой программы или диагностикой сохранённых настроек рекомендуется сделать резервную копию этих файлов.
 
-- Налаштування користувача зберігаються локально у конфігураційному файлі програми.
-- Файли конфігурації створюються або оновлюються програмою за потреби.
-- У V1.5.x статистика розрахована на збереження між запусками.
-- Перед заміною або оновленням збірки рекомендується зробити резервну копію конфігурації та файлів статистики.
+## Отказ от ответственности
 
-### Мови
+Проект предоставляется в образовательных целях. Автоматизация игрового процесса может нарушать правила игры или условия использования и привести к санкциям аккаунта. Используй проект ответственно и на свой риск.
 
-- English
-- Русский
 
-Український переклад README додано, але наявність української мови в інтерфейсі цієї версії не підтверджена.
+---
 
-### Відмова від відповідальності
+# Українська
 
-Це незалежний проєкт. Автоматизована взаємодія зі сторонніми іграми або сервісами може порушувати їхні правила та призвести до обмежень акаунта. Ознайомся з відповідними умовами та використовуй програмне забезпечення відповідально. Репозиторій не пов'язаний із Roblox або Slap Battles.
+**BOB Farm V1.5.6** — графічна версія проєкту BOB Farm. У програмі зібрані налаштування, стан застосунку, звіти та статистика.
+
+## Що нового у V1.5.6
+
+- Розширено розділи статистики та звітів.
+- Додано категорії статистики: за день, тиждень, поточну сесію, сесію роботи застосунку та за весь час.
+- Час роботи застосунку й окремої сесії відстежується незалежно.
+- Додано постійне збереження статистики, призначене для збереження накопичених даних між перезапусками.
+- Звіти стали докладнішими.
+- Telegram-звіти доповнено даними, а мова повідомлень синхронізується з мовою інтерфейсу.
+- Покращено організацію налаштувань і роботу з конфігурацією.
+- Оновлено локалізацію: англійську та російську, а також українську документацію.
+- Загальні покращення інтерфейсу, обробки даних і стабільності.
+
+## Мови
+
+README доступний англійською, російською та українською.
+
+
+## Файли
+
+| Файл | Опис |
+|---|---|
+| `bob_farm_gui.py` | Основний файл запуску GUI. |
+| `bob_farm_config.json` | Файл налаштувань; створюється/оновлюється програмою, якщо це передбачено. |
+| `requirements.txt` | Список Python-залежностей, якщо він є в репозиторії. |
+
+
+## Вимоги
+
+- Windows 10 або Windows 11, 64-bit
+- Python 3.9+ (із доступним Tkinter)
+- Python-пакети з `requirements.txt`, якщо файл є в репозиторії
+
+## Встановлення
+
+1. Встанови Python і переконайся, що він доступний у терміналі (`python --version`).
+2. Відкрий термінал у цій папці.
+3. Встанови залежності:
+
+   ```cmd
+   pip install -r requirements.txt
+   ```
+
+   Якщо `requirements.txt` відсутній, встанови пакети, зазначені розробниками проєкту.
+
+## Запуск
+
+У терміналі, відкритому в папці проєкту, виконай:
+
+
+```cmd
+python bob_farm_gui.py
+```
+
+## Налаштування та дані
+
+Налаштування й статистика можуть зберігатися локально у конфігураційних файлах. Перед заміною програми або діагностикою збережених налаштувань рекомендується зробити резервну копію цих файлів.
+
+## Застереження
+
+Проєкт надається з освітньою метою. Автоматизація ігрового процесу може порушувати правила гри або умови використання й призвести до санкцій щодо акаунта. Використовуй проєкт відповідально та на власний ризик.
